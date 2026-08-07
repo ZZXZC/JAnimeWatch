@@ -44,8 +44,9 @@
 
             <TextArea fx:id="outputArea"
                       editable="false"
-                      VBox.vgrow="ALWAYS"
+                      VBox.vgrow="SOMETIMES"
                       styleClass="output-area"
+                      prefHeight="100"
                       promptText="Output will appear here..."/>
         </VBox>
     </center>
@@ -89,12 +90,12 @@
                         onAction="#onWatch"
                         styleClass="primary-button"/>
                 <Button fx:id="updateButton"
-                        text="Update ani-cli"
+                        text="Update"
                         onAction="#onUpdate"
                         styleClass="secondary-button"/>
             </HBox>
 
-            <Text fx:id="statusText" text="Checking for ani-cli..." styleClass="status-text"/>
+            <Text fx:id="statusText" text="Checking dependencies..." styleClass="status-text"/>
         </VBox>
     </bottom>
 </BorderPane>

@@ -1,7 +1,16 @@
 /* ===== JAnimeWatch Dark Theme ===== */
 
-.root-pane {
+.root, .root-pane {
     -fx-background-color: #0f0f1a;
+}
+
+.root {
+    -fx-base: #0f0f1a;
+    -fx-background: #0f0f1a;
+    -fx-control-inner-background: #16162a;
+    -fx-accent: #7b68ee;
+    -fx-focus-color: #7b68ee;
+    -fx-faint-focus-color: transparent;
 }
 
 /* --- Title --- */
@@ -116,14 +125,39 @@
 }
 
 /* --- Output Area --- */
-.output-area {
+.output-area,
+.text-area {
     -fx-background-color: #0a0a14;
+    -fx-control-inner-background: #0a0a14;
     -fx-text-fill: #8a8aaa;
     -fx-font-family: "Consolas";
     -fx-font-size: 12px;
     -fx-border-color: #2a2a4a;
     -fx-border-radius: 6;
     -fx-background-radius: 6;
+    -fx-highlight-fill: #7b68ee;
+    -fx-highlight-text-fill: white;
+}
+
+.output-area .content,
+.text-area .content {
+    -fx-background-color: #0a0a14;
+}
+
+.output-area .scroll-pane,
+.text-area .scroll-pane {
+    -fx-background-color: #0a0a14;
+}
+
+.output-area .scroll-bar,
+.text-area .scroll-bar {
+    -fx-background-color: #0a0a14;
+}
+
+.output-area .scroll-bar .thumb,
+.text-area .scroll-bar .thumb {
+    -fx-background-color: #3a3a5a;
+    -fx-background-radius: 4;
 }
 
 /* --- Controls Section --- */
