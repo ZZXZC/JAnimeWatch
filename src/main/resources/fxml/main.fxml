@@ -1,0 +1,100 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+<?import javafx.scene.text.Text?>
+<?import javafx.geometry.Insets?>
+
+<BorderPane xmlns:fx="http://javafx.com/fxml"
+            fx:controller="com.janimewatch.MainController"
+            styleClass="root-pane">
+
+    <fx:define>
+        <ToggleGroup fx:id="playerGroup"/>
+    </fx:define>
+
+    <!-- Top: Search Bar -->
+    <top>
+        <VBox styleClass="search-section">
+            <padding><Insets top="15" right="15" bottom="10" left="15"/></padding>
+
+            <Text text="JAnimeWatch" styleClass="title-text"/>
+
+            <HBox spacing="10" alignment="CENTER_LEFT">
+                <TextField fx:id="searchField"
+                           promptText="Search anime..."
+                           HBox.hgrow="ALWAYS"
+                           onAction="#onSearch"/>
+                <Button fx:id="searchButton"
+                        text="Search"
+                        onAction="#onSearch"
+                        styleClass="primary-button"/>
+            </HBox>
+        </VBox>
+    </top>
+
+    <!-- Center: Results + Output -->
+    <center>
+        <VBox spacing="10">
+            <padding><Insets top="5" right="15" bottom="5" left="15"/></padding>
+
+            <ListView fx:id="resultsList"
+                      VBox.vgrow="ALWAYS"
+                      styleClass="results-list"/>
+
+            <TextArea fx:id="outputArea"
+                      editable="false"
+                      VBox.vgrow="ALWAYS"
+                      styleClass="output-area"
+                      promptText="Output will appear here..."/>
+        </VBox>
+    </center>
+
+    <!-- Bottom: Controls -->
+    <bottom>
+        <VBox styleClass="controls-section">
+            <padding><Insets top="10" right="15" bottom="15" left="15"/></padding>
+            <spacing>10</spacing>
+
+            <HBox spacing="15" alignment="CENTER_LEFT">
+                <!-- Episode -->
+                <HBox spacing="5" alignment="CENTER_LEFT">
+                    <Text text="Episode:" styleClass="label-text"/>
+                    <Spinner fx:id="episodeSpinner" prefWidth="80"/>
+                </HBox>
+
+                <!-- Player -->
+                <HBox spacing="5" alignment="CENTER_LEFT">
+                    <Text text="Player:" styleClass="label-text"/>
+                    <RadioButton fx:id="mpvRadio" text="mpv" toggleGroup="$playerGroup"/>
+                    <RadioButton fx:id="vlcRadio" text="vlc" toggleGroup="$playerGroup"/>
+                </HBox>
+
+                <!-- Quality -->
+                <HBox spacing="5" alignment="CENTER_LEFT">
+                    <Text text="Quality:" styleClass="label-text"/>
+                    <ComboBox fx:id="qualityBox" prefWidth="90"/>
+                </HBox>
+
+                <!-- Options -->
+                <CheckBox fx:id="dubCheck" text="Dub"/>
+                <CheckBox fx:id="downloadCheck" text="Download"/>
+
+                <!-- Spacer -->
+                <Region HBox.hgrow="ALWAYS"/>
+
+                <!-- Action Buttons -->
+                <Button fx:id="watchButton"
+                        text="Watch"
+                        onAction="#onWatch"
+                        styleClass="primary-button"/>
+                <Button fx:id="updateButton"
+                        text="Update ani-cli"
+                        onAction="#onUpdate"
+                        styleClass="secondary-button"/>
+            </HBox>
+
+            <Text fx:id="statusText" text="Checking for ani-cli..." styleClass="status-text"/>
+        </VBox>
+    </bottom>
+</BorderPane>
