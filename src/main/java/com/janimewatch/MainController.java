@@ -23,11 +23,13 @@ public class MainController {
     @FXML private CheckBox dubCheck;
     @FXML private CheckBox downloadCheck;
     @FXML private Button watchButton;
+    @FXML private Button historyButton;
     @FXML private Button updateButton;
     @FXML private TextArea outputArea;
     @FXML private Text statusText;
 
     private final AllAnimeService apiService = new AllAnimeService();
+    private final HistoryService historyService = new HistoryService();
     private final ObservableList<AnimeResult> searchResults = FXCollections.observableArrayList();
     private List<Integer> currentEpisodes;
 
@@ -45,6 +47,7 @@ public class MainController {
         SpinnerValueFactory.IntegerSpinnerValueFactory spvf =
                 new SpinnerValueFactory.IntegerSpinnerValueFactory(1, 9999, 1);
         episodeSpinner.setValueFactory(spvf);
+        episodeSpinner.setEditable(true);
 
         qualityBox.getItems().addAll("best", "1080", "720", "480");
         qualityBox.getSelectionModel().selectFirst();
@@ -82,6 +85,7 @@ public class MainController {
         searchField.setDisable(disabled);
         searchButton.setDisable(disabled);
         watchButton.setDisable(disabled);
+        historyButton.setDisable(disabled);
         updateButton.setDisable(disabled);
     }
 
@@ -115,14 +119,13 @@ public class MainController {
             return;
         }
 
-        int episode = episodeSpinner.getValue();
-        String quality = qualityBox.getValue();
-        String mode = dubCheck.isSelected() ? "dub" : "sub";
-        boolean download = downloadCheck.isSelected();
-        String player = vlcRadio.isSelected() ? "vlc" : "mpv";
+        final String quality = qualityBox.getValue();
+        final String mode = dubCheck.isSelected() ? "dub" : "sub";
+        final boolean download = downloadCheck.isSelected();
+        final String player = vlcRadio.isSelected() ? "vlc" : "mpv";
 
         outputArea.clear();
-        statusText.setText("Loading episode " + episode + "...");
+        statusText.setText("Loading episode " + episodeSpinner.getValue() + "...");
         watchButton.setDisable(true);
 
         new Thread(() -> {
@@ -133,23 +136,25 @@ public class MainController {
                 );
             }
 
+            int episode = episodeSpinner.getValue();
             if (!currentEpisodes.contains(episode)) {
-                // Find nearest available episode
                 int nearest = currentEpisodes.isEmpty() ? 1 : currentEpisodes.get(0);
                 for (int ep : currentEpisodes) {
                     if (Math.abs(ep - episode) < Math.abs(nearest - episode)) {
                         nearest = ep;
                     }
                 }
-                int finalNearest = nearest;
+                final int nearestEp = nearest;
+                final int requestedEp = episode;
                 Platform.runLater(() -> {
-                    outputArea.appendText("Episode " + episode + " not available. Nearest: " + finalNearest + "\n");
-                    episodeSpinner.getValueFactory().setValue(finalNearest);
+                    outputArea.appendText("Episode " + requestedEp + " not available. Nearest: " + nearestEp + "\n");
+                    episodeSpinner.getValueFactory().setValue(nearestEp);
                 });
-                episode = nearest;
+                episode = nearestEp;
             }
 
-            String streamUrl = apiService.getStreamUrl(selected.getId(), episode, quality, mode, msg ->
+            final int finalEpisode = episode;
+            String streamUrl = apiService.getStreamUrl(selected.getId(), finalEpisode, quality, mode, msg ->
                 Platform.runLater(() -> outputArea.appendText(msg + "\n"))
             );
 
@@ -165,14 +170,16 @@ public class MainController {
 
                 Process playerProcess = apiService.launchPlayer(
                     streamUrl,
-                    selected.getName() + " Episode " + episode,
+                    selected.getName() + " Episode " + finalEpisode,
                     player,
                     download
                 );
 
                 if (playerProcess != null) {
-                    statusText.setText("Playing " + selected.getName() + " Ep " + episode);
+                    statusText.setText("Playing " + selected.getName() + " Ep " + finalEpisode);
                     watchButton.setDisable(false);
+
+                    historyService.save(finalEpisode, selected.getId(), selected.getName());
 
                     new Thread(() -> {
                         try {
@@ -188,6 +195,95 @@ public class MainController {
                 }
             });
         }).start();
+    }
+
+    @FXML
+    private void onHistory() {
+        List<HistoryEntry> entries = historyService.load();
+        if (entries.isEmpty()) {
+            statusText.setText("No watch history found");
+            return;
+        }
+
+        java.util.Collections.reverse(entries);
+
+        Dialog<String> dialog = new Dialog<>();
+        dialog.setTitle("Watch History");
+        dialog.setHeaderText("Select an entry to resume watching");
+
+        ButtonType resumeType = new ButtonType("Resume", ButtonBar.ButtonData.OK_DONE);
+        ButtonType deleteType = new ButtonType("Delete History", ButtonBar.ButtonData.LEFT);
+        ButtonType cancelType = ButtonType.CANCEL;
+        dialog.getDialogPane().getButtonTypes().addAll(resumeType, deleteType, cancelType);
+        dialog.getDialogPane().getStylesheets().add(
+            getClass().getResource("/styles/dark-theme.css").toExternalForm());
+        dialog.getDialogPane().getStyleClass().add("root-pane");
+
+        ListView<HistoryEntry> listView = new ListView<>(FXCollections.observableArrayList(entries));
+        listView.setPrefHeight(300);
+        listView.setPrefWidth(400);
+        listView.setCellFactory(lv -> new ListCell<>() {
+            @Override
+            protected void updateItem(HistoryEntry item, boolean empty) {
+                super.updateItem(item, empty);
+                setText(empty || item == null ? null : item.toString());
+            }
+        });
+        listView.getSelectionModel().selectFirst();
+        dialog.getDialogPane().setContent(listView);
+
+        dialog.setResultConverter(btn -> {
+            if (btn == resumeType) return "resume";
+            if (btn == deleteType) return "delete";
+            return null;
+        });
+
+        dialog.showAndWait().ifPresent(action -> {
+            if ("delete".equals(action)) {
+                historyService.clear();
+                // Also try ani-cli -D
+                try {
+                    new ProcessBuilder("ani-cli", "-D").start();
+                } catch (Exception ignored) {}
+                statusText.setText("History deleted");
+                outputArea.clear();
+            } else if ("resume".equals(action)) {
+                HistoryEntry selected = listView.getSelectionModel().getSelectedItem();
+                if (selected == null) return;
+
+                statusText.setText("Searching for " + selected.getAnimeName() + "...");
+                outputArea.clear();
+                outputArea.appendText("Resuming: " + selected.getAnimeName()
+                    + " Episode " + selected.getEpisode() + "\n");
+
+                new Thread(() -> {
+                    List<AnimeResult> results = apiService.search(selected.getAnimeName(), null);
+                    AnimeResult match = null;
+                    for (AnimeResult r : results) {
+                        if (r.getName().equalsIgnoreCase(selected.getAnimeName())) {
+                            match = r;
+                            break;
+                        }
+                    }
+                    if (match == null && !results.isEmpty()) {
+                        match = results.get(0);
+                    }
+                    final AnimeResult found = match;
+
+                    Platform.runLater(() -> {
+                        if (found == null) {
+                            statusText.setText("Could not find " + selected.getAnimeName());
+                            return;
+                        }
+                        searchResults.clear();
+                        searchResults.add(found);
+                        resultsList.getSelectionModel().select(found);
+                        episodeSpinner.getValueFactory().setValue(selected.getEpisode());
+                        onWatch();
+                    });
+                }).start();
+            }
+        });
     }
 
     @FXML
@@ -209,9 +305,10 @@ public class MainController {
                 Process p = pb.start();
 
                 try (var reader = new java.io.BufferedReader(new java.io.InputStreamReader(p.getInputStream()))) {
-                    String line;
-                    while ((line = reader.readLine()) != null) {
-                        Platform.runLater(() -> outputArea.appendText(line + "\n"));
+                    String updateLine;
+                    while ((updateLine = reader.readLine()) != null) {
+                        final String msg = updateLine;
+                        Platform.runLater(() -> outputArea.appendText(msg + "\n"));
                     }
                 }
                 p.waitFor();

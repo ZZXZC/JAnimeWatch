@@ -26,10 +26,22 @@ public class AllAnimeService {
     }
 
     private String curl(String url) {
+        return curl(url, null);
+    }
+
+    private String curl(String url, String referer) {
         try {
-            ProcessBuilder pb = new ProcessBuilder(
-                "curl", "-sL", "-A", USER_AGENT, "--max-time", "15", url
-            );
+            List<String> cmd = new ArrayList<>();
+            cmd.add("curl"); cmd.add("-sL");
+            cmd.add("-A"); cmd.add(USER_AGENT);
+            cmd.add("-H"); cmd.add("Accept: application/json, text/html, */*");
+            if (referer != null) {
+                cmd.add("-H"); cmd.add("Referer: " + referer);
+            }
+            cmd.add("--max-time"); cmd.add("20");
+            cmd.add(url);
+
+            ProcessBuilder pb = new ProcessBuilder(cmd);
             pb.redirectErrorStream(true);
             Process p = pb.start();
             StringBuilder sb = new StringBuilder();
@@ -46,6 +58,12 @@ public class AllAnimeService {
         }
     }
 
+    private String extractNumericId(String slugOrId) {
+        java.util.regex.Matcher m = java.util.regex.Pattern
+            .compile("([0-9]+)$").matcher(slugOrId);
+        return m.find() ? m.group(1) : slugOrId;
+    }
+
     public List<AnimeResult> search(String query, Consumer<String> onStatus) {
         List<AnimeResult> results = new ArrayList<>();
         String encoded = URLEncoder.encode(query, StandardCharsets.UTF_8).replace("+", "%20");
@@ -59,7 +77,8 @@ public class AllAnimeService {
             return results;
         }
 
-        Pattern pattern = Pattern.compile("anime/([a-z0-9\\-]+\\-[0-9]+)\"[^>]*?alt=\"([^\"]+)\"");
+        // Match: <a href="...anime/one-piece-3880" ... title="One Piece">
+        Pattern pattern = Pattern.compile("anime/([a-z0-9][a-z0-9\\-]*-[0-9]+)\"[^>]*?title=\"([^\"]+)\"");
         Matcher matcher = pattern.matcher(html);
 
         while (matcher.find()) {
@@ -77,10 +96,12 @@ public class AllAnimeService {
 
     public List<Integer> getEpisodes(String animeId, Consumer<String> onStatus) {
         List<Integer> episodes = new ArrayList<>();
-        String url = BASE_URL + "/api/frontend/anime/" + animeId + "/episodes";
+        String numId = extractNumericId(animeId);
+        String referer = BASE_URL + "/anime/" + animeId;
+        String url = BASE_URL + "/api/frontend/anime/" + numId + "/episodes";
 
         if (onStatus != null) onStatus.accept("Loading episodes...");
-        String json = curl(url);
+        String json = curl(url, referer);
 
         if (json.isEmpty()) {
             if (onStatus != null) onStatus.accept("Failed to load episodes");
@@ -104,10 +125,13 @@ public class AllAnimeService {
     }
 
     public String getStreamUrl(String animeId, int episode, String quality, String mode, Consumer<String> onStatus) {
+        String numId = extractNumericId(animeId);
+        String referer = BASE_URL + "/anime/" + animeId;
+
         // Get episodes list to find the episode ID
-        String epUrl = BASE_URL + "/api/frontend/anime/" + animeId + "/episodes";
+        String epUrl = BASE_URL + "/api/frontend/anime/" + numId + "/episodes";
         if (onStatus != null) onStatus.accept("Finding episode " + episode + "...");
-        String epJson = curl(epUrl);
+        String epJson = curl(epUrl, referer);
 
         Pattern epPattern = Pattern.compile("\"id\":([0-9]+),\"number\":" + episode);
         Matcher epMatcher = epPattern.matcher(epJson);
@@ -125,7 +149,7 @@ public class AllAnimeService {
         // Get language/stream info
         String langUrl = BASE_URL + "/api/frontend/episode/" + episodeId + "/languages";
         if (onStatus != null) onStatus.accept("Getting stream sources...");
-        String langJson = curl(langUrl);
+        String langJson = curl(langUrl, referer);
 
         // Extract embed URL - prefer sub (jpn) or dub (eng) based on mode
         String langCode = "dub".equals(mode) ? "eng" : "jpn";
@@ -219,6 +243,7 @@ public class AllAnimeService {
 
             ProcessBuilder pb = new ProcessBuilder(cmd);
             pb.redirectErrorStream(true);
+            pb.redirectOutput(ProcessBuilder.Redirect.DISCARD);
             return pb.start();
         } catch (IOException e) {
             return null;

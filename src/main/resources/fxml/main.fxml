@@ -55,8 +55,9 @@
     <bottom>
         <VBox styleClass="controls-section">
             <padding><Insets top="10" right="15" bottom="15" left="15"/></padding>
-            <spacing>10</spacing>
+            <spacing>8</spacing>
 
+            <!-- Row 1: Settings -->
             <HBox spacing="15" alignment="CENTER_LEFT">
                 <!-- Episode -->
                 <HBox spacing="5" alignment="CENTER_LEFT">
@@ -80,22 +81,27 @@
                 <!-- Options -->
                 <CheckBox fx:id="dubCheck" text="Dub"/>
                 <CheckBox fx:id="downloadCheck" text="Download"/>
+            </HBox>
 
-                <!-- Spacer -->
-                <Region HBox.hgrow="ALWAYS"/>
-
-                <!-- Action Buttons -->
+            <!-- Row 2: Buttons + Status -->
+            <HBox spacing="10" alignment="CENTER_LEFT">
                 <Button fx:id="watchButton"
                         text="Watch"
                         onAction="#onWatch"
                         styleClass="primary-button"/>
+                <Button fx:id="historyButton"
+                        text="History"
+                        onAction="#onHistory"
+                        styleClass="secondary-button"/>
                 <Button fx:id="updateButton"
                         text="Update"
                         onAction="#onUpdate"
                         styleClass="secondary-button"/>
-            </HBox>
 
-            <Text fx:id="statusText" text="Checking dependencies..." styleClass="status-text"/>
+                <Region HBox.hgrow="ALWAYS"/>
+
+                <Text fx:id="statusText" text="Checking dependencies..." styleClass="status-text"/>
+            </HBox>
         </VBox>
     </bottom>
 </BorderPane>
