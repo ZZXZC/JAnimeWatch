@@ -5,6 +5,7 @@ import javafx.fxml.FXMLLoader;
 import javafx.scene.Parent;
 import javafx.scene.Scene;
 import javafx.stage.Stage;
+import javafx.stage.StageStyle;
 
 public class App extends Application {
 
@@ -12,6 +13,8 @@ public class App extends Application {
     public void start(Stage primaryStage) throws Exception {
         FXMLLoader loader = new FXMLLoader(getClass().getResource("/fxml/main.fxml"));
         Parent root = loader.load();
+
+        primaryStage.initStyle(StageStyle.UNDECORATED);
 
         Scene scene = new Scene(root, 900, 650);
         scene.getStylesheets().add(getClass().getResource("/styles/dark-theme.css").toExternalForm());

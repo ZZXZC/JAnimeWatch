@@ -4,6 +4,7 @@ public class WatchOptions {
 
     private boolean dub = false;
     private boolean download = false;
+    private boolean skip = false;
     private String player = "";
     private String quality = "";
 
@@ -21,6 +22,14 @@ public class WatchOptions {
 
     public void setDownload(boolean download) {
         this.download = download;
+    }
+
+    public boolean isSkip() {
+        return skip;
+    }
+
+    public void setSkip(boolean skip) {
+        this.skip = skip;
     }
 
     public String getPlayer() {
